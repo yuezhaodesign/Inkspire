@@ -1,0 +1,9 @@
+langchain-core>=0.3.0
+langgraph>=0.2.0
+langchain-google-genai>=2.0.0
+google-generativeai>=0.8.0
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+pathlib2>=2.3.7; python_version < "3.4"
+typing-extensions>=4.8.0
+coloredlogs>=15.0
