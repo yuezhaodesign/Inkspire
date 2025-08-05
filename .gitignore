@@ -1,0 +1,36 @@
+# Environment variables
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+*.pyc
+
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Build outputs
+build/
+dist/
+
+# OS files
+.DS_Store
+
+# Everything else except what we want
+/*
+!/frontend/
+!/backend/
+!/README.md
+!/.gitignore
+
+# But still exclude sensitive files within allowed folders
+backend/.env
+backend/venv/
+backend/__pycache__/
+backend/course_libraries/
+frontend/ra-question-generator/node_modules/
+frontend/ra-question-generator/build/
