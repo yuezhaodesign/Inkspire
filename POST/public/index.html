@@ -1,0 +1,281 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Perusall Range Finder (with geometry, cleaned fragment)</title>
+
+  <!-- PDF.js viewer CSS (selection styles) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/web/pdf_viewer.css">
+
+  <style>
+    html, body { margin: 0; font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    #panel { position: sticky; top: 0; background: #fff; padding: 10px 12px; border-bottom: 1px solid #eee; z-index: 10; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input[type="text"] { padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; }
+    #pdfUrl { width: 280px; }
+    #fragmentInput { flex: 1 1 360px; min-width: 260px; }
+    button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; background: #f6f6f6; cursor: pointer; }
+    button:hover { background: #efefef; }
+    #results { padding: 8px 12px; border-bottom: 1px solid #eee; }
+    #results .item { padding: 6px 8px; border: 1px solid #e6e6e6; border-radius: 8px; margin: 6px 0; display: grid; gap: 6px; }
+    #results .meta { color: #555; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    #pages { padding: 16px 12px 40px; }
+    .page { position: relative; width: max-content; margin: 22px auto; }
+    .page canvas { display: block; position: relative; z-index: 1; }
+    .page .textLayer { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: auto; }
+    .page .textLayer, .page .textLayer * { user-select: text; -webkit-user-select: text; }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <strong>PDF:</strong>
+    <input id="pdfUrl" type="text" value="./document.pdf" />
+    <input id="fragmentInput" type="text" placeholder="Type the quote (or use selection)..." />
+    <button id="findBtn" type="button">Find</button>
+    <button id="useSelBtn" type="button">Use selection</button>
+    <span class="hint">Span counts per page will log in the console.</span>
+  </div>
+
+  <div id="results">Loading…</div>
+  <div id="pages"></div>
+
+  <!-- PDF.js (pinned) -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  </script>
+
+  <!-- Rangy (core + TextRange) -->
+  <script src="https://cdn.jsdelivr.net/npm/rangy/lib/rangy-core.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/rangy/lib/rangy-textrange.js"></script>
+
+  <script>
+    const pagesHost = document.getElementById('pages');
+    const resultsHost = document.getElementById('results');
+    const pdfUrlInput = document.getElementById('pdfUrl');
+    const fragmentInput = document.getElementById('fragmentInput');
+    const findBtn = document.getElementById('findBtn');
+    const useSelBtn = document.getElementById('useSelBtn');
+
+    let textLayerDivs = [];
+
+    // ---------- PDF render (all pages) ----------
+    async function renderPDF(url) {
+      pagesHost.innerHTML = '';
+      textLayerDivs = [];
+      resultsHost.textContent = 'Loading PDF…';
+
+      const pdf = await pdfjsLib.getDocument(url).promise;
+
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        // Page shell
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'page';
+        pageDiv.dataset.page = String(pageNum);
+        pageDiv.style.width = viewport.width + 'px';
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        const textLayerDiv = document.createElement('div');
+        textLayerDiv.className = 'textLayer';
+        // IMPORTANT: set scale factor so PDF.js positions match and avoid console warnings
+        textLayerDiv.style.setProperty('--scale-factor', String(viewport.scale));
+
+        pageDiv.append(canvas, textLayerDiv);
+        pagesHost.appendChild(pageDiv);
+
+        // 1) paint bitmap
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        // 2) selectable text layer (new API: textContentSource)
+        const textContentSource = page.streamTextContent({ normalizeWhitespace: true });
+        await pdfjsLib.renderTextLayer({
+          textContentSource,
+          container: textLayerDiv,
+          viewport,
+          textDivs: []
+        }).promise;
+
+        textLayerDivs.push(textLayerDiv);
+        console.log(`Page ${pageNum}: text spans =`, textLayerDiv.querySelectorAll('span').length);
+      }
+
+      resultsHost.textContent = `Loaded ${textLayerDivs.length} page(s).`;
+    }
+
+    // initial load & url change
+    renderPDF(pdfUrlInput.value).catch(err => {
+      console.error(err);
+      resultsHost.textContent = 'Error loading PDF. Check Console.';
+    });
+    pdfUrlInput.addEventListener('change', () => renderPDF(pdfUrlInput.value).catch(console.error));
+
+    // ---------- tolerant search + highlight ----------
+    rangy.init();
+
+    function buildTolerantRegex(fragment) {
+      const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const APOS = "['\\u2019\\u2018\\u2032\\uFF07]";
+      const DQUO = '["\\u201C\\u201D\\uFF02]';
+      const DASH = '[-\\u2010\\u2011\\u2012\\u2013\\u2014]';
+      return new RegExp(
+        [...fragment].map(ch => {
+          if (/\s/.test(ch)) return '\\s+';
+          if (ch === '-' || /[‐-‒–—]/.test(ch)) return DASH;
+          if (ch === "'" || /[’‘′＇]/.test(ch)) return APOS;
+          if (ch === '"' || /[“”＂]/.test(ch)) return DQUO;
+          return esc(ch) + '(?:' + DASH + '\\s*)?'; // allow hyphenation after any char
+        }).join(''),
+        'i'
+      );
+    }
+
+    // ---------- geometry + cleaning helpers ----------
+    function clamp(v, min = 0, max = 1) { return Math.max(min, Math.min(max, v)); }
+
+    // Normalize the selected text for the `fragment` (remove newlines/tabs, NBSP)
+    function cleanFragment(s) {
+      return s.replace(/\u00A0/g, ' ')   // NBSP -> space
+              .replace(/\s+/g, ' ')      // collapse all whitespace (incl. \n)
+              .trim();
+    }
+
+    // Compute normalized selection box: X in [0..1]; Y = pageNumber + fraction from top
+    function computeNormalizedBox(container, range, page) {
+      const rects = Array.from(range.nativeRange.getClientRects());
+      if (!rects.length) return null;
+
+      const base = container.getBoundingClientRect();
+      const left   = Math.min(...rects.map(r => r.left))   - base.left;
+      const right  = Math.max(...rects.map(r => r.right))  - base.left;
+      const top    = Math.min(...rects.map(r => r.top))    - base.top;
+      const bottom = Math.max(...rects.map(r => r.bottom)) - base.top;
+
+      const w = base.width || 1;
+      const h = base.height || 1;
+
+      const startX = clamp(left  / w);
+      const endX   = clamp(right / w);
+      const startY = page + clamp(top    / h);
+      const endY   = page + clamp(bottom / h);
+
+      return { startX, endX, startY, endY };
+    }
+
+    function showResults(list) {
+      if (!list.length) { resultsHost.textContent = 'No matches found.'; return; }
+      resultsHost.innerHTML = '';
+      list.forEach(row => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = JSON.stringify(row);
+        const btn = document.createElement('button');
+        btn.textContent = 'Highlight on page';
+        btn.onclick = () => highlight(row.page, row.start, row.end);
+        div.append(meta, btn);
+        resultsHost.appendChild(div);
+      });
+      console.log('Matches:', list);
+    }
+
+    function highlight(page, start, end) {
+      const container = textLayerDivs[page - 1];
+      const r = rangy.createRange();
+      r.selectCharacters(container, start, end);
+      const sel = rangy.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      const rect = r.nativeRange.getBoundingClientRect();
+      window.scrollTo({ top: rect.top + window.scrollY - 120, behavior: 'smooth' });
+    }
+
+    function findEverywhere(fragment) {
+      const rx = buildTolerantRegex(fragment);
+      const matches = [];
+
+      textLayerDivs.forEach((container, idx) => {
+        const page = idx + 1;
+        const visible = rangy.innerText(container);
+        let m; let startAt = 0;
+
+        while ((m = rx.exec(visible.slice(startAt))) !== null) {
+          const start = startAt + m.index;
+          const end   = start + m[0].length;
+
+          // DOM range for measuring geometry
+          const r = rangy.createRange();
+          r.selectCharacters(container, start, end);
+          const box = computeNormalizedBox(container, r, page) || {};
+
+          const raw = visible.slice(start, end);
+
+          matches.push({
+            page,
+            start,
+            end,
+            fragment: cleanFragment(raw),   // cleaned (no \n)
+            // rawFragment: raw,            // uncomment if you want the original slice too
+            ...box                          // startX, endX, startY, endY
+          });
+
+          startAt = end; // continue after this hit
+        }
+      });
+
+      return matches;
+    }
+
+    findBtn.addEventListener('click', () => {
+      const frag = fragmentInput.value.trim();
+      if (!frag) { resultsHost.textContent = 'Type or select a quote first.'; return; }
+      const list = findEverywhere(frag);
+      showResults(list);
+      if (list[0]) highlight(list[0].page, list[0].start, list[0].end);
+    });
+
+    // Use the user's current selection from the PDF (no typing)
+    useSelBtn.addEventListener('click', () => {
+      const sel = rangy.getSelection();
+      if (!sel.rangeCount) { alert('Select text on the PDF first.'); return; }
+      const userRange = sel.getRangeAt(0);
+
+      // Find the page's textLayer containing the selection
+      let node = userRange.startContainer;
+      while (node && node.nodeType !== 1) node = node.parentNode;
+      const container = node && node.closest('.textLayer');
+      if (!container) { alert('Please select text on the PDF (not the toolbar).'); return; }
+
+      const page = [...document.querySelectorAll('.page .textLayer')].indexOf(container) + 1;
+
+      // Offsets
+      const cr = userRange.toCharacterRange(container);
+      const visible = rangy.innerText(container);
+      const raw = visible.slice(cr.start, cr.end);
+
+      // Geometry
+      const box = computeNormalizedBox(container, userRange, page) || {};
+
+      // Show a single result immediately
+      showResults([{
+        page,
+        start: cr.start,
+        end: cr.end,
+        fragment: cleanFragment(raw),   // cleaned
+        // rawFragment: raw,
+        ...box                          // startX, endX, startY, endY
+      }]);
+
+      // keep the input in sync so Find can repeat it
+      fragmentInput.value = cleanFragment(raw);
+    });
+  </script>
+</body>
+</html>

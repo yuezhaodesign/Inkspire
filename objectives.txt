@@ -1,0 +1,25 @@
+Core Python Skills
+- Write, debug, and refactor Python programs using AI coding assistants.
+- Structure Python projects with modules, packages, and virtual environments.
+- Apply AI assistance to accelerate error-handling, debugging, and code optimization.
+
+AI-Assisted Programming Practices
+- Critically evaluate AI-generated code for correctness, efficiency, and security.
+- Develop strategies to write effective prompts for AI code assistants.
+- Integrate AI feedback loops (explain, suggest, refine) into coding workflow.
+- Build awareness of AI limitations and biases in code generation.
+
+Data & Libraries
+- Use AI to scaffold code for data analysis and visualization with pandas, numpy, and matplotlib.
+- Generate and test functions for data cleaning, transformation, and feature engineering.
+- Apply AI assistance to explore and document APIs in machine learning libraries like scikit-learn and tensorflow.
+
+Problem Solving & Projects
+- Design small Python applications (e.g., calculators, text analyzers, chatbots) with AI-assisted planning and code generation.
+- Employ AI tools to brainstorm multiple coding solutions and choose the most effective one.
+- Collaborate on projects using AI as a pair-programmer while maintaining accountability for understanding.
+
+Ethics & Responsible Use
+- Identify ethical considerations in relying on AI for programming tasks.
+- Learn when to trust AI suggestions and when to verify through testing and documentation.
+- Reflect on how AI assistance changes learning process and coding independence.
