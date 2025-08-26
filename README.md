@@ -1,6 +1,6 @@
 # InkSpire
 
-Here is the guideline on how to use InkSpire. You need to have your targeted reading uploaded to the Perusall and set it as **assignment**. You also need to have the **X-institution** and **X-API-token** ready.
+Here is the guideline on how to use InkSpire. You need to have your target reading uploaded to the Perusall and set it as **assignment**. You also need to have the **GOOGLE_API_KEY**, **X-institution** and **X-API-token** ready.
 
 ## Step 1: GET the pure text of the reading
 
@@ -25,8 +25,8 @@ Here is the guideline on how to use InkSpire. You need to have your targeted rea
 1. cd Your/Path/to/Inkspire
 2. Add .env file: `GOOGLE_API_KEY=`
 3. Paste **perusall_data_extracted_cleaned.txt** (the final output in step 1) to InkSpire folder and rename it to **reading.txt**
-4. Add instructor’s objectives for this learning in **objectives.txt**
-5. Add all the knowledge base files to the folder **kb_folder**
+4. Add instructor’s objectives for this reading in **objectives.txt**
+5. Add all the knowledge base readings to the folder **kb_folder**
 6. Install the requirements.txt
 7. Run the workflow: 
 
@@ -42,7 +42,7 @@ python workflow.py \
 ## Step 3: POST to the Perusall
 
 1. cd Your/Path/to/POST
-2. Save your targeted reading as **public/document.pdf**.
+2. Save your target reading as **public/document.pdf**.
 3. Run the location calculator: `npx serve public`
 4. Open the link and **select the annotation texts** output in Step 2
 5. Get the metadata information
