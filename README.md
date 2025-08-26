@@ -1,6 +1,6 @@
 # InkSpire
 
-Here is the guideline about how to use InkSpire. You need to have your targeted reading uploaded to the Perusall and set it as **assignment**. You also need to have the **X-institution** and **X-API-token** ready.
+Here is the guideline on how to use InkSpire. You need to have your targeted reading uploaded to the Perusall and set it as **assignment**. You also need to have the **X-institution** and **X-API-token** ready.
 
 ## Step 1: GET the pure text of the reading
 
