@@ -5,7 +5,7 @@ Here is the guideline about how to use InkSpire. You need to have your targeted 
 ## Step 1: GET the pure text of the reading
 
 1. cd Your/Path/to/GET
-2. Use [Perusall API](https://apidocs.perusall.com/#get-the-contents-of-a-document) to **Get the contents of a document’. Run the following code in your terminal. 
+2. Use [Perusall API](https://apidocs.perusall.com/#get-the-contents-of-a-document) to **Get the contents of a document**. Run the following code in your terminal. 
 - couseId: [List all courses](https://apidocs.perusall.com/#list-all-courses)
 - documentId: [Get the contents of a course library](https://apidocs.perusall.com/#get-the-contents-of-a-course-library)
     
@@ -26,23 +26,23 @@ Here is the guideline about how to use InkSpire. You need to have your targeted 
 2. Add .env file: `GOOGLE_API_KEY=`
 3. Paste **perusall_data_extracted_cleaned.txt** (the final output in step 1) to InkSpire folder and rename it to **reading.txt**
 4. Add instructor’s objectives for this learning in **objectives.txt**
-5. Add all the knowledge base files to **kb_folder**
+5. Add all the knowledge base files to the folder **kb_folder**
 6. Install the requirements.txt
 7. Run the workflow: 
 
-<pre> ```python workflow.py \
+```python workflow.py \
 --reading ./reading1.pdf \
 --knowledgebase ./kb_folder\
---objectives-file ./objectives.txt``` </pre>
+--objectives-file ./objectives.txt``` 
 
 8. Get the output in the terminal
 
 ## Step 3: POST to the Perusall
 
 1. cd Your/Path/to/POST
-2. Save your targeted reading as **public.document.pdf**.
+2. Save your targeted reading as **public/document.pdf**.
 3. Run the location calculator: `npx serve public`
-4. Open the link and **select the annotation text** outputted in Step 2
+4. Open the link and **select the annotation texts** output in Step 2
 5. Get the metadata information
 6. POST the annotation and questions/prompts to Perusall in this format. 
 - fragment is the annotation text in the reading
