@@ -30,10 +30,12 @@ Here is the guideline about how to use InkSpire. You need to have your targeted 
 6. Install the requirements.txt
 7. Run the workflow: 
 
-```python workflow.py \
---reading ./reading1.pdf \
---knowledgebase ./kb_folder\
---objectives-file ./objectives.txt``` 
+```bash
+python workflow.py \
+  --reading ./reading.pdf \
+  --knowledgebase ./kb_folder \
+  --objectives-file ./objectives.txt
+  ```
 
 8. Get the output in the terminal
 
